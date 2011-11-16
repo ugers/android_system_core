@@ -23,6 +23,7 @@
 #include <linux/kd.h>
 #include <errno.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <netinet/in.h>
 #include <linux/if.h>
 #include <arpa/inet.h>
@@ -272,7 +273,6 @@ int do_exec(int nargs, char **args)
         if (WEXITSTATUS(status) != 0) {
             ERROR("exec: pid %1d exited with return code %d: %s", (int)pid, WEXITSTATUS(status), strerror(status));
         }
-        
     }
     return 0;
 }
