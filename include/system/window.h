@@ -280,6 +280,7 @@ enum {
     NATIVE_WINDOW_API_DISCONNECT            = 14,   /* private */
     NATIVE_WINDOW_SET_BUFFERS_USER_DIMENSIONS = 15, /* private */
     NATIVE_WINDOW_SET_POST_TRANSFORM_CROP   = 16,   /* private */
+    NATIVE_WINDOW_SET_BUFFERS_SIZE          = 17,   /* private */
     NATIVE_WINDOW_SETPARAMETER              = 50,
     NATIVE_WINDOW_GETPARAMETER              = 51
 
