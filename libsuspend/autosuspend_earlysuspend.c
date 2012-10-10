@@ -35,6 +35,7 @@
 static int sPowerStatefd;
 static const char *pwr_state_mem = "mem";
 static const char *pwr_state_on = "on";
+static const char *pwr_state_bootfast="bootfast";
 
 static int autosuspend_earlysuspend_enable(void)
 {
@@ -42,7 +43,7 @@ static int autosuspend_earlysuspend_enable(void)
     int ret;
 
     ALOGV("autosuspend_earlysuspend_enable\n");
-
+	
     ret = write(sPowerStatefd, pwr_state_mem, strlen(pwr_state_mem));
     if (ret < 0) {
         strerror_r(errno, buf, sizeof(buf));
@@ -51,6 +52,28 @@ static int autosuspend_earlysuspend_enable(void)
     }
 
     ALOGV("autosuspend_earlysuspend_enable done\n");
+
+    return 0;
+
+err:
+    return ret;
+}
+
+static int autosuspend_earlysuspend_gotobootfast(void)
+{
+    char buf[80];
+    int ret;
+
+    ALOGV("autosuspend_earlysuspend_gotobootfast\n");
+	
+    ret = write(sPowerStatefd, pwr_state_bootfast, strlen(pwr_state_bootfast));
+    if (ret < 0) {
+        strerror_r(errno, buf, sizeof(buf));
+        ALOGE("Error writing to %s: %s\n", EARLYSUSPEND_SYS_POWER_STATE, buf);
+        goto err;
+    }
+
+    ALOGV("autosuspend_earlysuspend_gotobootfast done\n");
 
     return 0;
 
@@ -92,6 +115,7 @@ static int autosuspend_earlysuspend_disable(void){
 struct autosuspend_ops autosuspend_earlysuspend_ops = {
         .enable = autosuspend_earlysuspend_enable,
         .disable = autosuspend_earlysuspend_disable,
+		.bootfast = autosuspend_earlysuspend_gotobootfast,
 };
 
 struct autosuspend_ops *autosuspend_earlysuspend_init(void)
