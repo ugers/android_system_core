@@ -107,3 +107,27 @@ int autosuspend_disable(void)
     autosuspend_enabled = false;
     return 0;
 }
+
+int autosuspend_bootfast(void)
+{
+    int ret;
+
+    ret = autosuspend_init();
+    if (ret) {
+        return ret;
+    }
+
+    ALOGV("autosuspend_enable\n");
+
+    if (autosuspend_enabled) {
+        return 0;
+    }
+
+    ret = autosuspend_ops->bootfast();
+    if (ret) {
+        return ret;
+    }
+
+    autosuspend_enabled = true;
+    return 0;
+}
