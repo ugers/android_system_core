@@ -77,9 +77,16 @@ err:
     return ret;
 }
 
+static int autosuspend_autosleep_bootfast(void)
+{
+  ALOGV("not support\n");
+  return 0;
+}
+
 struct autosuspend_ops autosuspend_autosleep_ops = {
         .enable = autosuspend_autosleep_enable,
         .disable = autosuspend_autosleep_disable,
+    .bootfast = autosuspend_autosleep_bootfast,
 };
 
 struct autosuspend_ops *autosuspend_autosleep_init(void)
