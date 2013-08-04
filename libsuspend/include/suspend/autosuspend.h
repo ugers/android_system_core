@@ -43,6 +43,8 @@ int autosuspend_enable(void);
  */
 int autosuspend_disable(void);
 
+int autosuspend_bootfast(void);
+
 __END_DECLS
 
 #endif
