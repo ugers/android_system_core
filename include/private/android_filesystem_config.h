@@ -62,6 +62,9 @@
 #define AID_DRMRPC        1026  /* group for drm rpc */
 #define AID_NFC           1027  /* nfc subsystem */
 #define AID_SDCARD_R      1028  /* external storage read access */
+#define AID_AUDIT         1031  /* audit daemon */
+
+#define AID_THEMEMAN      1300  /* theme manager */
 
 #define AID_SHELL         2000  /* adb and debug shell user */
 #define AID_CACHE         2001  /* cache access */
@@ -174,6 +177,8 @@ static const struct android_id_info android_ids[] = {
 #endif
     { "misc",      AID_MISC, },
     { "nobody",    AID_NOBODY, },
+    { "theme_man", AID_THEMEMAN },
+    { "audit",      AID_AUDIT, },
 };
 
 #define android_id_count \

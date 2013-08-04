@@ -35,6 +35,7 @@
 #include <cutils/partition_utils.h>
 #include <sys/system_properties.h>
 #include <fs_mgr.h>
+#include <fts.h>
 
 #ifdef HAVE_SELINUX
 #include <selinux/selinux.h>
@@ -804,6 +805,47 @@ int do_chown(int nargs, char **args) {
     } else if (nargs == 4) {
         if (_chown(args[3], decode_uid(args[1]), decode_uid(args[2])) < 0)
             return -errno;
+    } else if (nargs == 5) {
+        int ret = 0;
+        int ftsflags = FTS_PHYSICAL;
+        FTS *fts;
+        FTSENT *ftsent;
+        char *options = args[1];
+        uid_t uid = decode_uid(args[2]);
+        uid_t gid = decode_uid(args[3]);
+        char * path_argv[] = {args[4], NULL};
+        if (strcmp(options, "-R")) {
+            ERROR("do_chown: Invalid argument: %s\n", args[1]);
+            return -EINVAL;
+        }
+        fts = fts_open(path_argv, ftsflags, NULL);
+        if (!fts) {
+            ERROR("do_chown: Error traversing hierarchy starting at %s\n", path_argv[0]);
+            return -errno;
+        }
+        while ((ftsent = fts_read(fts))) {
+            switch (ftsent->fts_info) {
+            case FTS_DP:
+            case FTS_SL:
+                break;
+            case FTS_DNR:
+            case FTS_ERR:
+            case FTS_NS:
+                ERROR("do_chown: Could not access %s\n", ftsent->fts_path);
+                fts_set(fts, ftsent, FTS_SKIP);
+                ret = -errno;
+                break;
+            default:
+                if (_chown(ftsent->fts_accpath, uid, gid) < 0) {
+                    ret = -errno;
+                    fts_set(fts, ftsent, FTS_SKIP);
+                }
+                break;
+            }
+        }
+        fts_close(fts);
+        if (ret)
+            return ret;
     } else {
         return -1;
     }
@@ -843,34 +885,29 @@ int do_restorecon(int nargs, char **args) {
 
 int do_setsebool(int nargs, char **args) {
 #ifdef HAVE_SELINUX
-    SELboolean *b = alloca(nargs * sizeof(SELboolean));
-    char *v;
-    int i;
+    const char *name = args[1];
+    const char *value = args[2];
+    SELboolean b;
+    int ret;
 
     if (is_selinux_enabled() <= 0)
         return 0;
 
-    for (i = 1; i < nargs; i++) {
-        char *name = args[i];
-        v = strchr(name, '=');
-        if (!v) {
-            ERROR("setsebool: argument %s had no =\n", name);
-            return -EINVAL;
-        }
-        *v++ = 0;
-        b[i-1].name = name;
-        if (!strcmp(v, "1") || !strcasecmp(v, "true") || !strcasecmp(v, "on"))
-            b[i-1].value = 1;
-        else if (!strcmp(v, "0") || !strcasecmp(v, "false") || !strcasecmp(v, "off"))
-            b[i-1].value = 0;
-        else {
-            ERROR("setsebool: invalid value %s\n", v);
-            return -EINVAL;
-        }
+    b.name = name;
+    if (!strcmp(value, "1") || !strcasecmp(value, "true") || !strcasecmp(value, "on"))
+        b.value = 1;
+    else if (!strcmp(value, "0") || !strcasecmp(value, "false") || !strcasecmp(value, "off"))
+        b.value = 0;
+    else {
+        ERROR("setsebool: invalid value %s\n", value);
+        return -EINVAL;
     }
 
-    if (security_set_boolean_list(nargs - 1, b, 0) < 0)
-        return -errno;
+    if (security_set_boolean_list(1, &b, 0) < 0) {
+        ret = -errno;
+        ERROR("setsebool: could not set %s to %s\n", name, value);
+        return ret;
+    }
 #endif
     return 0;
 }
