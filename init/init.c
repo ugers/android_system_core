@@ -174,8 +174,8 @@ void service_start(struct service *svc, const char *dynamic_args)
     pid_t pid;
     int needs_console;
     int n;
-#ifdef HAVE_SELINUX
     char *scon = NULL;
+#ifdef HAVE_SELINUX
     int rc;
 #endif
         /* starting a service removes it from the disabled or reset
@@ -216,28 +216,36 @@ void service_start(struct service *svc, const char *dynamic_args)
 
 #ifdef HAVE_SELINUX
     if (is_selinux_enabled() > 0) {
-        char *mycon = NULL, *fcon = NULL;
+        if (svc->seclabel) {
+            scon = strdup(svc->seclabel);
+            if (!scon) {
+                ERROR("Out of memory while starting '%s'\n", svc->name);
+                return;
+            }
+        } else {
+            char *mycon = NULL, *fcon = NULL;
 
-        INFO("computing context for service '%s'\n", svc->args[0]);
-        rc = getcon(&mycon);
-        if (rc < 0) {
-            ERROR("could not get context while starting '%s'\n", svc->name);
-            return;
-        }
+            INFO("computing context for service '%s'\n", svc->args[0]);
+            rc = getcon(&mycon);
+            if (rc < 0) {
+                ERROR("could not get context while starting '%s'\n", svc->name);
+                return;
+            }
 
-        rc = getfilecon(svc->args[0], &fcon);
-        if (rc < 0) {
-            ERROR("could not get context while starting '%s'\n", svc->name);
+            rc = getfilecon(svc->args[0], &fcon);
+            if (rc < 0) {
+                ERROR("could not get context while starting '%s'\n", svc->name);
+                freecon(mycon);
+                return;
+            }
+
+            rc = security_compute_create(mycon, fcon, string_to_security_class("process"), &scon);
             freecon(mycon);
-            return;
-        }
-
-        rc = security_compute_create(mycon, fcon, string_to_security_class("process"), &scon);
-        freecon(mycon);
-        freecon(fcon);
-        if (rc < 0) {
-            ERROR("could not get context while starting '%s'\n", svc->name);
-            return;
+            freecon(fcon);
+            if (rc < 0) {
+                ERROR("could not get context while starting '%s'\n", svc->name);
+                return;
+            }
         }
     }
 #endif
@@ -277,16 +285,12 @@ void service_start(struct service *svc, const char *dynamic_args)
         for (ei = svc->envvars; ei; ei = ei->next)
             add_environment(ei->name, ei->value);
 
-#ifdef HAVE_SELINUX
-        setsockcreatecon(scon);
-#endif
-
         for (si = svc->sockets; si; si = si->next) {
             int socket_type = (
                     !strcmp(si->type, "stream") ? SOCK_STREAM :
                         (!strcmp(si->type, "dgram") ? SOCK_DGRAM : SOCK_SEQPACKET));
             int s = create_socket(si->name, socket_type,
-                                  si->perm, si->uid, si->gid);
+                                  si->perm, si->uid, si->gid, si->socketcon ?: scon);
             if (s >= 0) {
                 publish_socket(si->name, s);
             }
@@ -295,7 +299,6 @@ void service_start(struct service *svc, const char *dynamic_args)
 #ifdef HAVE_SELINUX
         freecon(scon);
         scon = NULL;
-        setsockcreatecon(NULL);
 #endif
 
         if (svc->ioprio_class != IoSchedClass_NONE) {
@@ -794,7 +797,7 @@ static int bootchart_init_action(int nargs, char **args)
 
 #ifdef HAVE_SELINUX
 static const struct selinux_opt seopts_prop[] = {
-        { SELABEL_OPT_PATH, "/data/system/property_contexts" },
+        { SELABEL_OPT_PATH, "/data/security/property_contexts" },
         { SELABEL_OPT_PATH, "/property_contexts" },
         { 0, NULL }
 };
