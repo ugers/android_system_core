@@ -198,6 +198,10 @@ enum {
     CAMERA_CMD_LONGSHOT_OFF = 15,
     CAMERA_CMD_METADATA_ON = 100,
     CAMERA_CMD_METADATA_OFF = 101,
+    
+    // add command
+    CAMERA_CMD_SET_SCREEN_ID = 0xFF000000,
+    CAMERA_CMD_SET_CEDARX_RECORDER = 0xFF000001,
 };
 
 /** camera fatal errors */
