@@ -74,6 +74,7 @@ int chmod_main(int argc, char **argv)
     int ch = 0;
     int recursive = 0;
     unsigned int flag =0;
+    int help = 0;
     static struct option long_options[] =
         {
             {"help",       no_argument,       0, 'H'},
@@ -85,21 +86,20 @@ int chmod_main(int argc, char **argv)
     while((ch = getopt_long(argc, argv, "HhR",long_options,&option_index)) != -1)
     switch(ch){
         case 'H':
-        if(argc < 3)
-            return usage();
-        break;
+            help = 1;
+            break;
         case 'R':
-        recursive = 1;
-        break;
+            recursive = 1;
+            break;
         case 'h':
-        noFollow = 1;
-        break;
+            noFollow = 1;
+            break;
         default:
-        break;
+            break;
 
     }
 
-    if (recursive && argc < 4) {
+    if (argc < 3 || help || (recursive && argc < 4)) {
         return usage();
     }
 
@@ -128,6 +128,11 @@ int chmod_main(int argc, char **argv)
         }
         s++;
     }
+
+    // We are using O_NONBLOCK in order to avoid issues with non-regular files,
+    // e.g. fifos. According to fifo(7), opening a FIFO for read only with
+    // O_NONBLOCK will succeed even if noone has opened on the write side yet.
+    flag |= O_NONBLOCK;
 
     for (i = 2; i < argc; i++) {
         if(((fd = open(argv[i], flag|O_RDONLY )) != -1)||((fd = open(argv[i], flag|O_WRONLY )) != -1)) {

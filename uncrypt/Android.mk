@@ -1,4 +1,4 @@
-# Copyright (C) 2008 The Android Open Source Project
+# Copyright (C) 2014 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +15,11 @@
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := dumpkey
-LOCAL_SRC_FILES := DumpPublicKey.java
-LOCAL_JAR_MANIFEST := DumpPublicKey.mf
-LOCAL_STATIC_JAVA_LIBRARIES := bouncycastle-host
-include $(BUILD_HOST_JAVA_LIBRARY)
+
+LOCAL_SRC_FILES := uncrypt.c
+
+LOCAL_MODULE := uncrypt
+
+LOCAL_STATIC_LIBRARIES := libfs_mgr liblog libcutils
+
+include $(BUILD_EXECUTABLE)

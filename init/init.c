@@ -63,6 +63,7 @@
 #include "util.h"
 #include "ueventd.h"
 #include "watchdogd.h"
+#include "vendor_init.h"
 
 struct selabel_handle *sehandle;
 struct selabel_handle *sehandle_prop;
@@ -825,10 +826,6 @@ static void import_kernel_nv(char *name, int for_emulator)
         cnt = snprintf(prop, sizeof(prop), "ro.boot.%s", boot_prop_name);
         if (cnt < PROP_NAME_MAX)
             property_set(prop, value);
-#ifdef HAS_SEMC_BOOTLOADER
-    } else if (!strcmp(name,"serialno")) {
-        property_set("ro.boot.serialno", value);
-#endif
     }
 }
 
@@ -912,6 +909,11 @@ static int property_service_init_action(int nargs, char **args)
      * that /data/local.prop cannot interfere with them.
      */
     start_property_service();
+
+    /* update with vendor-specific property runtime
+     * overrides
+     */
+    vendor_load_properties();
     return 0;
 }
 
@@ -961,7 +963,6 @@ static int bootchart_init_action(int nargs, char **args)
 #endif
 
 static const struct selinux_opt seopts_prop[] = {
-        { SELABEL_OPT_PATH, "/data/security/property_contexts" },
         { SELABEL_OPT_PATH, "/property_contexts" },
         { 0, NULL }
 };
@@ -987,6 +988,7 @@ struct selabel_handle* selinux_android_prop_context_handle(void)
 void selinux_init_all_handles(void)
 {
     sehandle = selinux_android_file_context_handle();
+    selinux_android_set_sehandle(sehandle);
     sehandle_prop = selinux_android_prop_context_handle();
 }
 
@@ -1207,7 +1209,6 @@ int main(int argc, char **argv)
     /* execute all the boot actions to get us started */
     action_for_each_trigger("init", action_add_queue_tail);
 
-    /* skip mounting filesystems in charger mode */
     if (!is_charger) {
         action_for_each_trigger("early-fs", action_add_queue_tail);
         if(emmc_boot) {
@@ -1217,6 +1218,8 @@ int main(int argc, char **argv)
         }
         action_for_each_trigger("post-fs", action_add_queue_tail);
         action_for_each_trigger("post-fs-data", action_add_queue_tail);
+    } else {
+        action_for_each_trigger("charger-fs", action_add_queue_tail);
     }
 
     /* Repeat mix_hwrng_into_linux_rng in case /dev/hw_random or /dev/random
@@ -1301,7 +1304,7 @@ int main(int argc, char **argv)
             continue;
 
         for (i = 0; i < fd_count; i++) {
-            if (ufds[i].revents == POLLIN) {
+            if (ufds[i].revents & POLLIN) {
                 if (ufds[i].fd == get_property_set_fd())
                     handle_property_set_fd();
                 else if (ufds[i].fd == get_keychord_fd())

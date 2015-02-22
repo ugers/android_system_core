@@ -141,6 +141,8 @@ ssize_t VectorImpl::insertAt(const void* item, size_t index, size_t numItems)
 {
     if (index > size())
         return BAD_INDEX;
+    if (numItems < 1)
+        return index;
     void* where = _grow(index, numItems);
     if (where) {
         if (item) {
@@ -516,7 +518,7 @@ void VectorImpl::_do_move_backward(void* dest, const void* from, size_t num) con
     do_move_backward(dest, from, num);
 }
 
-#if NEEDS_VECTORIMPL_SYMBOLS
+#ifdef NEEDS_VECTORIMPL_SYMBOLS
 void VectorImpl::reservedVectorImpl1() { }
 void VectorImpl::reservedVectorImpl2() { }
 void VectorImpl::reservedVectorImpl3() { }
@@ -642,7 +644,7 @@ ssize_t SortedVectorImpl::remove(const void* item)
     return i;
 }
 
-#if NEEDS_VECTORIMPL_SYMBOLS
+#ifdef NEEDS_VECTORIMPL_SYMBOLS
 void SortedVectorImpl::reservedSortedVectorImpl1() { };
 void SortedVectorImpl::reservedSortedVectorImpl2() { };
 void SortedVectorImpl::reservedSortedVectorImpl3() { };
