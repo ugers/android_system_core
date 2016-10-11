@@ -986,6 +986,9 @@ static void selinux_initialize(bool in_kernel_domain) {
     }
 }
 
+extern "C" {
+#include "init_mem_opt.c"
+}
 int main(int argc, char** argv) {
     if (!strcmp(basename(argv[0]), "ueventd")) {
         return ueventd_main(argc, argv);

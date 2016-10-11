@@ -358,6 +358,9 @@ void get_property_workspace(int *fd, int *sz)
 }
 
 static void load_properties_from_file(const char *, const char *);
+extern "C" {
+void property_opt_for_mem(void);
+}
 
 /*
  * Filter is used to decide which properties to load: NULL loads all keys,
@@ -560,17 +563,13 @@ void load_recovery_id_prop() {
     close(fd);
 }
 
-void load_all_props() {
+void load_system_props() {
     load_properties_from_file(PROP_PATH_SYSTEM_BUILD, NULL);
     load_properties_from_file(PROP_PATH_VENDOR_BUILD, NULL);
     load_properties_from_file(PROP_PATH_FACTORY, "ro.*");
-
-    load_override_properties();
-
-    /* Read persistent properties after all default values have been loaded. */
-    load_persistent_properties();
-
     load_recovery_id_prop();
+
+    property_opt_for_mem();
 }
 
 void start_property_service() {
